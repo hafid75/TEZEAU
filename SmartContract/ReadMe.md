@@ -20,4 +20,4 @@ The contract includes a test suite that can be run using the command smartpy tes
 This contract is provided as an example only and should not be used in production without significant modification and testing. Smart contract development is complex and requires a deep understanding of blockchain technology, cryptography, and programming. It is essential to thoroughly test any smart contract before deploying it to a production environment.
 
 ## Improvement axis
-In this code, the main improvement axis is the verification of participation in the quiz and therefore the creation of the quiz contract associated with the user.
+In this code, the main improvement axis is the verification of participation in the quiz and therefore the creation of the quiz contract associated with the user, We can do this with automate création of a SMC Vote for each SMC Quizz
