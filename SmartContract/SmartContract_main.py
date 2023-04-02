@@ -38,6 +38,7 @@ class Vote(sp.Contract):
         sp.set_type(params, sp.TRecord(option=sp.TString, token_id=sp.TIntOrNat))
         option = params.option
         token_id = params.token_id
+
         
         self.data.users[sp.sender] = sp.record(option_vote=option, token_id=token_id)
         #self.data.users[sp.sender].option_vote = option
@@ -82,10 +83,11 @@ class Quizz(sp.Contract):
     def takequizz(self,params):
         sp.set_type(params, sp.TRecord(answer1=sp.TString,answer2=sp.TString,answer3=sp.TString))
 
-        sp.verify(self.data.passed==False, "Déjà répondu")
+        sp.verify(self.data.passed==False, "Quizz déjà réussi")
         
+        #S'il a echoué il y'a moins de 2 heures au quizz il ne pourra pas recommencer le quizz
         sp.verify(sp.timestamp_from_utc_now() >= self.data.time.add_seconds(2*60*60), "Vous devez attendre 2 heures avant de pouvoir répondre à nouveau.")
-
+   
         score = 0
         sp.if params.answer1 == self.data.answer1:
             score += 1
@@ -93,7 +95,8 @@ class Quizz(sp.Contract):
             score += 1
         sp.if params.answer3 == self.data.answer3:
             score += 1
-
+         
+        #Quizz echoué s'il a pas 3 sur 3
         sp.if score < 3:
             self.data.time = sp.now
             sp.failwith("Vous avez échoué le quizz. Veuillez réessayer dans 2 heures.")
@@ -108,24 +111,36 @@ def test():
 
     admin = sp.test_account("tz1admin")
     Alice = sp.test_account("Alice")
+    Bob = sp.test_account("Bob")
 
 
     Q = Quizz(Alice.address,time)
     scenario += Q
 
     # création des réponses
-    scenario += Q.setAnswers(answer1="d",answer2="e",answer3="f").run()
+    scenario += Q.setAnswers(answer1="R1",answer2="R2",answer3="R3").run()
 
     # reponse aux question
-    scenario += Q.takequizz(answer1="d",answer2="e",answer3="f").run(valid=True)
+    scenario += Q.takequizz(answer1="R1",answer2="R2",answer3="R3").run(valid=True)
 
-    nft = NFT(FA2.FA2_config(non_fungible=True), admin=admin.address, metadata= sp.big_map({"": sp.utils.bytes_of_string("tezos-storage:content"),"content": sp.utils.bytes_of_string("""{"name": "TezEau responsable", "description": "Avec ce NFT vous pouerrez votez"}""")}))
-    scenario += nft
-    nft.mint(token_id=0, address=Alice.address, amount=1, metadata = sp.map({"": sp.utils.bytes_of_string("ipfs://bafkreih36m3d4yfbpyteluvntuph5xybwtgxdvyksbgyg66es44drk4hqy")})).run(sender=admin)
+    # reponse sachant qu'il a déjà répondu
+    scenario += Q.takequizz(answer1="R1",answer2="R2",answer3="R3").run(valid=False)
+
+
+    #Mint du nft pour alice
+    nft1 = NFT(FA2.FA2_config(non_fungible=True), admin=admin.address, metadata= sp.big_map({"": sp.utils.bytes_of_string("tezos-storage:content"),"content": sp.utils.bytes_of_string("""{"name": "TezEau responsable", "description": "Avec ce NFT vous pouerrez votez"}""")}))
+    scenario += nft1
+    nft1.mint(token_id=0, address=Alice.address, amount=1, metadata = sp.map({"": sp.utils.bytes_of_string("ipfs://bafkreih36m3d4yfbpyteluvntuph5xybwtgxdvyksbgyg66es44drk4hqy")})).run(sender=admin)
     
-    a = nft.all_tokens()
+    #Mint du nft pour Bob
+    nft2 = NFT(FA2.FA2_config(non_fungible=True), admin=admin.address, metadata= sp.big_map({"": sp.utils.bytes_of_string("tezos-storage:content"),"content": sp.utils.bytes_of_string("""{"name": "TezEau responsable", "description": "Avec ce NFT vous pouerrez votez"}""")}))
+    scenario += nft2
+    nft2.mint(token_id=0, address=Alice.address, amount=1, metadata = sp.map({"": sp.utils.bytes_of_string("ipfs://bafkreih36m3d4yfbpyteluvntuph5xybwtgxdvyksbgyg66es44drk4hqy")})).run(sender=admin)
 
-    V = Vote(Alice.address,nft.address)
+    V = Vote(Alice.address,nft1.address)
+    scenario += V
+
+    V = Vote(Bob.address,nft2.address)
     scenario += V
 
     #definition des votes
@@ -133,14 +148,25 @@ def test():
                           option2="Traitement pour une utilisation potable", 
                           option3="Traitement pour une utilisation industrielle")
 
-    # Ajout du votant
+    # Ajout du votant Alice
     scenario += V.ajoutVotant(option="Traitement pour une utilisation potable", token_id=0).run(valid=True,
         sender = Alice
     )
+
+
+    # Ajout du votant Bob
+    scenario += V.ajoutVotant(option="Traitement pour une utilisation potable", token_id=0).run(valid=True,
+        sender = Bob
+    )
     
-    # Vote par l'utilistaue (possédant le nft et ayant répondu au sondage)
+    # Vote par l'utilisateur Alice (possédant le nft et ayant répondu au sondage)
     scenario += V.vote().run(valid=True,
         sender = Alice
+    )
+
+        # Vote par l'utilisteur Bob (possédant le nft et ayant répondu au sondage)
+    scenario += V.vote().run(valid=True,
+        sender = Bob
     )
 
     # Vote par l'utilistaue (ne possédant pas le nft et ayant répondu au sondage)
