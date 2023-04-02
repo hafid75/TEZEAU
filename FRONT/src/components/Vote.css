@@ -1,0 +1,83 @@
+.vote-container{
+    width:100%;
+    height:100vh;
+    padding-top:100px;
+    padding-bottom:100px;
+}
+
+.vote-header{
+    height:300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+}
+
+.vote-title{
+    font-size: 50px;
+    font-family: 'AnekKannada';
+}
+
+.vote-sujet{
+    font-size: 50px;
+    font-family: 'AnekKannada';
+    color:#6799F8;
+
+}
+
+
+.vote-cards{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+
+}
+
+.card-container{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    width: 300px;
+    height: 520px;
+    padding:20px 20px 20px 20px;
+    background-color: #f5f5f5;
+    border: 2px solid #6799F8;
+    border-radius: 50px;
+}
+
+.card-container span{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    width:100%;
+    padding:10px 0px 10px 0px ;
+    font-size: 25px;
+
+    font-family: 'AnekKannada';
+}
+
+
+.card-container button{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width:50%;
+    height: 50px;
+    border: none;
+    font-size: 25px;
+    background-color: #6799F8;
+    border-radius: 50px;
+    color: #f5f5f5;
+
+    font-family: 'AnekKannada';
+
+    cursor: pointer;
+}
+
+.card-container button:hover{
+    background-color: #E0F1FA;
+    color: #6799F8;
+}
