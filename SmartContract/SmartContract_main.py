@@ -35,10 +35,12 @@ class Vote(sp.Contract):
     #fonction qui ajoute le possesseur du nft dans la map
     @sp.entry_point
     def ajoutVotant(self, params):
-        sp.set_type(params, sp.TRecord(option=sp.TString, token_id=sp.TIntOrNat))
+        sp.set_type(params, sp.TRecord(option=sp.TString, token_id=sp.TIntOrNat,questionnaireIsDone=sp.TBool))
         option = params.option
         token_id = params.token_id
+        questionnaireIsDone = params.questionnaireIsDone
 
+        sp.verify(questionnaireIsDone==True, "N'a pas répondu au questionnaire")
         
         self.data.users[sp.sender] = sp.record(option_vote=option, token_id=token_id)
         #self.data.users[sp.sender].option_vote = option
@@ -78,6 +80,11 @@ class Quizz(sp.Contract):
         self.data.answer2 = params.answer2
         self.data.answer3 = params.answer3
 
+    #view qui retourne qi l'utilisateur a repondu au questionnaire ou non
+    @sp.onchain_view()
+    def questionnaireIsOk(self):
+        sp.result(self.data.passed)
+
     #fonction qui vérifie les réponses
     @sp.entry_point
     def takequizz(self,params):
@@ -114,17 +121,20 @@ def test():
     Bob = sp.test_account("Bob")
 
 
-    Q = Quizz(Alice.address,time)
-    scenario += Q
+    Q_A = Quizz(Alice.address,time)
+    scenario += Q_A
+
+    Q_B = Quizz(Bob.address,time)
+    scenario += Q_B
 
     # création des réponses
-    scenario += Q.setAnswers(answer1="R1",answer2="R2",answer3="R3").run()
+    scenario += Q_A.setAnswers(answer1="R1",answer2="R2",answer3="R3").run()
 
     # reponse aux question
-    scenario += Q.takequizz(answer1="R1",answer2="R2",answer3="R3").run(valid=True)
+    scenario += Q_A.takequizz(answer1="R1",answer2="R2",answer3="R3").run(valid=True)
 
     # reponse sachant qu'il a déjà répondu
-    scenario += Q.takequizz(answer1="R1",answer2="R2",answer3="R3").run(valid=False)
+    scenario += Q_A.takequizz(answer1="R1",answer2="R2",answer3="R3").run(valid=False)
 
 
     #Mint du nft pour alice
@@ -148,14 +158,20 @@ def test():
                           option2="Traitement pour une utilisation potable", 
                           option3="Traitement pour une utilisation industrielle")
 
+    #Vérification du vote d'Alice
+    scenario.show(Q_A.questionnaireIsOk())
+    verify = Q_A.questionnaireIsOk()
     # Ajout du votant Alice
-    scenario += V.ajoutVotant(option="Traitement pour une utilisation potable", token_id=0).run(valid=True,
+    scenario += V.ajoutVotant(option="Traitement pour une utilisation potable", token_id=0,questionnaireIsDone=verify).run(valid=True,
         sender = Alice
     )
-
-
-    # Ajout du votant Bob
-    scenario += V.ajoutVotant(option="Traitement pour une utilisation potable", token_id=0).run(valid=True,
+    
+    
+    #Vérification du vote de Bob
+    scenario.show(Q_B.questionnaireIsOk())
+    verify = Q_B.questionnaireIsOk()
+    # Ajout du votant Bob (ne pourra pas car n'a pas répondu au quizz)
+    scenario += V.ajoutVotant(option="Traitement pour une utilisation potable", token_id=0,questionnaireIsDone=verify).run(valid=False,
         sender = Bob
     )
     
@@ -164,8 +180,8 @@ def test():
         sender = Alice
     )
 
-        # Vote par l'utilisteur Bob (possédant le nft et ayant répondu au sondage)
-    scenario += V.vote().run(valid=True,
+        # Vote par l'utilisteur Bob (ne possédant pas le nft et ayant pas répondu au sondage)
+    scenario += V.vote().run(valid=False,
         sender = Bob
     )
 
